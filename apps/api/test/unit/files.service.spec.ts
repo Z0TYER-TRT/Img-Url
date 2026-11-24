@@ -21,23 +21,25 @@ const config: AppConfig = {
 };
 
 function fakeStorage(count = 2) {
-  const puts: Array<{ storageId: number; key: string; contentType: string }> = [];
+  const buckets = Array.from({ length: count }, (_, index) => `b${index}`);
+  const puts: Array<{ index: number; key: string; contentType: string }> = [];
   const failOn = new Set<number>();
   const port: StoragePort = {
     count,
-    async put(storageId, _buffer, key, contentType) {
-      if (failOn.has(storageId)) throw new Error('bucket down');
-      puts.push({ storageId, key, contentType });
+    bucketAt: (index) => buckets[index],
+    async put(index, _buffer, key, contentType) {
+      if (failOn.has(index)) throw new Error('bucket down');
+      puts.push({ index, key, contentType });
     },
-    async presign(storageId, key) {
-      return `https://s3.test/${storageId}/${key}`;
+    async presign(bucket, key) {
+      return `https://s3.test/${bucket}/${key}`;
     },
     async remove() {},
   };
   return { port, puts, failOn };
 }
 
-function fakeModel(groups: Array<{ _id: number; n: number }>) {
+function fakeModel(groups: Array<{ _id: string; n: number }>) {
   return {
     aggregate: jest.fn().mockResolvedValue(groups),
     create: jest.fn(async (doc: Record<string, unknown>) => ({ ...doc, createdAt: new Date(), views: 0 })),
@@ -49,19 +51,36 @@ const upload = { buffer: PNG, originalname: 'x.png', size: PNG.length };
 describe('FilesService', () => {
   it('uploads to the account holding the fewest files', async () => {
     const storage = fakeStorage();
-    const service = new FilesService(fakeModel([{ _id: 0, n: 9 }, { _id: 1, n: 2 }]), storage.port, config);
+    const service = new FilesService(
+      fakeModel([{ _id: 'b0', n: 9 }, { _id: 'b1', n: 2 }]),
+      storage.port,
+      config,
+    );
     const result = await service.createFromUpload(upload);
-    expect(storage.puts[0].storageId).toBe(1);
+    expect(storage.puts[0].index).toBe(1);
     expect(storage.puts[0].contentType).toBe('image/png');
     expect(result.url).toMatch(/^https:\/\/example\.duckdns\.org\/f\/[A-Za-z0-9]{10}$/);
   });
 
+  it('records the bucket name, not the array index, so config reordering is safe', async () => {
+    const storage = fakeStorage();
+    const model = {
+      aggregate: jest.fn().mockResolvedValue([]),
+      create: jest.fn(async (doc: Record<string, unknown>) => ({ ...doc, createdAt: new Date(), views: 0 })),
+    } as never;
+    const service = new FilesService(model, storage.port, config);
+    await service.createFromUpload(upload);
+    const created = (model as unknown as { create: jest.Mock }).create.mock.calls[0][0];
+    expect(created.bucket).toBe('b0');
+    expect(created).not.toHaveProperty('storageId');
+  });
+
   it('falls through to the next account when one throws', async () => {
     const storage = fakeStorage();
-    storage.failOn.add(1);
-    const service = new FilesService(fakeModel([{ _id: 0, n: 0 }, { _id: 1, n: 0 }]), storage.port, config);
+    storage.failOn.add(0);
+    const service = new FilesService(fakeModel([]), storage.port, config);
     await service.createFromUpload(upload);
-    expect(storage.puts[0].storageId).toBe(0);
+    expect(storage.puts[0].index).toBe(1);
   });
 
   it('fails loudly when every account fails', async () => {

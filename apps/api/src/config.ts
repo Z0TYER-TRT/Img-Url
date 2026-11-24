@@ -46,6 +46,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const sessionSecret = req('SESSION_SECRET');
   if (sessionSecret.length < 32) fail('SESSION_SECRET must be at least 32 characters');
 
+  // The two values shipped in .env.example are public; refuse to boot with them.
+  if (adminPassword === 'changeme123') fail('ADMIN_PASSWORD is still the example value');
+  if (sessionSecret === 'replace-with-32-plus-random-characters') {
+    fail('SESSION_SECRET is still the example value');
+  }
+
   const rawAccounts = req('B2_ACCOUNTS');
   let accounts: B2Account[];
   try {

@@ -6,7 +6,7 @@ export class FileDoc {
   id: string;
 
   @Prop({ required: true })
-  storageId: number;
+  bucket: string;
 
   @Prop({ required: true })
   key: string;

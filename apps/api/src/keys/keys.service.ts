@@ -37,8 +37,9 @@ export class KeysService {
     }));
   }
 
-  async revoke(id: string): Promise<void> {
-    await this.model.deleteOne({ id });
+  async revoke(id: string): Promise<boolean> {
+    const result = await this.model.deleteOne({ id });
+    return (result.deletedCount ?? 0) > 0;
   }
 
   findByRaw(raw: string): Promise<ApiKeyDoc | null> {

@@ -12,8 +12,6 @@ type Result = {
   name: string;
 };
 
-const MAX_BYTES = 50 * 1024 * 1024;
-
 export default function Uploader() {
   const [results, setResults] = useState<Result[]>([]);
   const [progress, setProgress] = useState<number | null>(null);
@@ -22,22 +20,10 @@ export default function Uploader() {
   const [over, setOver] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
-  // Pre-checks are a courtesy; the API is the authority on type and size.
-  function acceptable(file: File) {
-    if (file.size > MAX_BYTES) return `${file.name} is larger than 50MB.`;
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      return `${file.name} is not an image or video.`;
-    }
-    return '';
-  }
-
+  // The API decides what is acceptable; pre-checking here would duplicate
+  // MAX_UPLOAD_MB and reject valid files the OS reports without a mime type.
   async function run(files: File[]) {
     for (const file of files) {
-      const problem = acceptable(file);
-      if (problem) {
-        setError(problem);
-        continue;
-      }
       setError('');
       setProgress(0);
       try {

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { APP_CONFIG, AppConfig } from '../config';
+import { sessionVersion } from './session-version';
 
 function sameSecret(a: string, b: string): boolean {
   const left = createHash('sha256').update(a).digest();
@@ -28,7 +29,7 @@ export class AuthService {
   }
 
   sign(): Promise<string> {
-    return this.jwt.signAsync({ sub: 'admin' });
+    return this.jwt.signAsync({ sub: 'admin', v: sessionVersion(this.config.adminPassword) });
   }
 
   cookieOptions() {

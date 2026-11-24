@@ -1,9 +1,14 @@
-import 'dotenv/config';
 import 'reflect-metadata';
+import { config as loadEnv } from 'dotenv';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+
+// Works from the repo root and from apps/api (where `npm run start:dev` lands).
+// Existing variables always win, so compose/env still overrides these files.
+loadEnv();
+loadEnv({ path: '../../.env' });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

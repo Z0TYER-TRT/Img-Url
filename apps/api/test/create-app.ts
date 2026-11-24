@@ -8,22 +8,29 @@ import { STORAGE, StoragePort } from '../src/storage/storage.port';
 
 export class FakeStorage implements StoragePort {
   readonly count = 2;
+  readonly buckets = ['b0', 'b1'];
   readonly objects = new Map<string, Buffer>();
   readonly removed: string[] = [];
   readonly failOn = new Set<number>();
+  failRemove = false;
 
-  async put(storageId: number, buffer: Buffer, key: string): Promise<void> {
-    if (this.failOn.has(storageId)) throw new Error('storage down');
-    this.objects.set(`${storageId}/${key}`, buffer);
+  bucketAt(index: number): string {
+    return this.buckets[index];
   }
 
-  async presign(storageId: number, key: string): Promise<string> {
-    return `https://s3.test/${storageId}/${key}?X-Amz-Signature=deadbeef&X-Amz-Expires=300`;
+  async put(index: number, buffer: Buffer, key: string): Promise<void> {
+    if (this.failOn.has(index)) throw new Error('storage down');
+    this.objects.set(`${this.buckets[index]}/${key}`, buffer);
   }
 
-  async remove(storageId: number, key: string): Promise<void> {
+  async presign(bucket: string, key: string): Promise<string> {
+    return `https://s3.test/${bucket}/${key}?X-Amz-Signature=deadbeef&X-Amz-Expires=43200`;
+  }
+
+  async remove(bucket: string, key: string): Promise<void> {
+    if (this.failRemove) throw Object.assign(new Error('AccessDenied'), { name: 'AccessDenied' });
     this.removed.push(key);
-    this.objects.delete(`${storageId}/${key}`);
+    this.objects.delete(`${bucket}/${key}`);
   }
 }
 

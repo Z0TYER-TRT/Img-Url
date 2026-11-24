@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Post,
   UseGuards,
@@ -29,6 +30,6 @@ export class KeysController {
   @Delete(':id')
   @HttpCode(204)
   async revoke(@Param('id') id: string) {
-    await this.keys.revoke(id);
+    if (!(await this.keys.revoke(id))) throw new NotFoundException();
   }
 }

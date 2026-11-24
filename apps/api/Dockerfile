@@ -1,5 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+# mongodb-memory-server is a test-only dep; do not download a mongod binary here.
+ENV MONGOMS_DISABLE_POSTINSTALL=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tsconfig.json nest-cli.json ./

@@ -14,7 +14,9 @@ export class ApiKeyGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const header: string = request.headers.authorization ?? '';
     const [scheme, raw] = header.split(' ');
-    if (scheme !== 'Bearer' || !raw?.startsWith('ik_')) throw new UnauthorizedException();
+    if (scheme?.toLowerCase() !== 'bearer' || !raw?.startsWith('ik_')) {
+      throw new UnauthorizedException();
+    }
 
     const key = await this.keys.findByRaw(raw);
     if (!key) throw new UnauthorizedException();

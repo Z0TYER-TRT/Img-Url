@@ -39,6 +39,9 @@ certificate over HTTP-01 on first start — no DNS plugin needed.
    `listFiles, readFiles, writeFiles, deleteFiles`.
 3. Repeat for up to 10 buckets if you want uploads spread across them.
 
+Each file records the **bucket name** it lives in, so later edits to this list
+are safe. Never delete a bucket you still have files in — those links become 404.
+
 ### 3. Configure
 
 ```bash
@@ -89,9 +92,9 @@ your own services.
   deliberately does not require Cloudflare.
 - Storage is $6.95/TB/month; the first 10GB are free.
 - Caddy, MongoDB and Next.js need roughly 512MB of RAM together.
-- The redirect URL is signed for **5 minutes**. A long video keeps playing
-  because the player re-requests `/f/<id>` for each range; a link pasted into
-  a download manager later still works, because the manager asks `/f/<id>` again.
+- The redirect URL is signed for **12 hours**. Browsers follow the 302 once and
+  keep using that URL for range requests, so a long video keeps seeking without
+  going back through `/f/<id>`. Re-opening the share link always mints a fresh one.
 
 ## Local development
 
@@ -126,10 +129,11 @@ revocation.
 
 - One admin account from env; password stored nowhere but the hash comparison
   at boot. The session is an HttpOnly, SameSite=Lax JWT cookie, `Secure` in
-  production.
-- Login is limited to 5 attempts per minute per IP.
-- Uploads are validated by magic bytes; SVG is rejected because it can carry
-  script and would run on your own origin.
+  production. The cookie carries a fingerprint of the current password, so
+  changing `ADMIN_PASSWORD` or `SESSION_SECRET` logs out every existing session.
+- Login is limited to 5 requests per minute per IP (successful logins count too).
+- Uploads are validated by magic bytes; only image and video types the server can
+  name are accepted, so SVG (which can carry script) and TIFF are rejected.
 - Buckets stay private. Public links are 302s to short-lived presigned URLs.
 - MongoDB is not exposed to the host; it is only reachable on the compose
   network.

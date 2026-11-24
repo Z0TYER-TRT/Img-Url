@@ -41,4 +41,14 @@ describe('loadConfig', () => {
     const { ADMIN_EMAIL: _ignored, ...rest } = validEnv;
     expect(() => loadConfig(rest as NodeJS.ProcessEnv)).toThrow(/ADMIN_EMAIL/);
   });
+
+  it('refuses the example admin password shipped in the repo', () => {
+    expect(() => loadConfig({ ...validEnv, ADMIN_PASSWORD: 'changeme123' })).toThrow(/example/);
+  });
+
+  it('refuses the example session secret shipped in the repo', () => {
+    expect(() =>
+      loadConfig({ ...validEnv, SESSION_SECRET: 'replace-with-32-plus-random-characters' }),
+    ).toThrow(/example/);
+  });
 });

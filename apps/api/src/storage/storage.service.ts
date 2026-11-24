@@ -7,7 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { APP_CONFIG, AppConfig } from '../config';
-import { PRESIGN_SECONDS, StoragePort } from './storage.port';
+import { PRESIGN_SECONDS, StorageAccountGoneError, StoragePort } from './storage.port';
 
 @Injectable()
 export class StorageService implements StoragePort {
@@ -34,10 +34,14 @@ export class StorageService implements StoragePort {
     return this.clients.length;
   }
 
-  async put(storageId: number, buffer: Buffer, key: string, contentType: string): Promise<void> {
-    await this.clients[storageId].send(
+  bucketAt(index: number): string {
+    return this.buckets[index];
+  }
+
+  async put(index: number, buffer: Buffer, key: string, contentType: string): Promise<void> {
+    await this.clients[index].send(
       new PutObjectCommand({
-        Bucket: this.buckets[storageId],
+        Bucket: this.buckets[index],
         Key: key,
         Body: buffer,
         ContentType: contentType,
@@ -46,17 +50,23 @@ export class StorageService implements StoragePort {
     );
   }
 
-  async presign(storageId: number, key: string): Promise<string> {
+  async presign(bucket: string, key: string): Promise<string> {
     return getSignedUrl(
-      this.clients[storageId],
-      new GetObjectCommand({ Bucket: this.buckets[storageId], Key: key }),
+      this.clients[this.indexFor(bucket)],
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
       { expiresIn: PRESIGN_SECONDS },
     );
   }
 
-  async remove(storageId: number, key: string): Promise<void> {
-    await this.clients[storageId].send(
-      new DeleteObjectCommand({ Bucket: this.buckets[storageId], Key: key }),
+  async remove(bucket: string, key: string): Promise<void> {
+    await this.clients[this.indexFor(bucket)].send(
+      new DeleteObjectCommand({ Bucket: bucket, Key: key }),
     );
+  }
+
+  private indexFor(bucket: string): number {
+    const index = this.buckets.indexOf(bucket);
+    if (index < 0) throw new StorageAccountGoneError(bucket);
+    return index;
   }
 }

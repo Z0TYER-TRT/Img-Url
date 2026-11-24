@@ -21,6 +21,11 @@ describe('mime', () => {
     expect(kindOf('image/svg+xml')).toBeNull();
   });
 
+  it('rejects types it cannot name or serve, such as tiff', () => {
+    expect(kindOf('image/tiff')).toBeNull();
+    expect(kindOf('application/octet-stream')).toBeNull();
+  });
+
   it('rejects unknown bytes', () => {
     expect(sniffMime(Buffer.from('hello'))).toBeNull();
     expect(kindOf(null)).toBeNull();

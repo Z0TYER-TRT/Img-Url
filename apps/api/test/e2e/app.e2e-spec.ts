@@ -106,12 +106,31 @@ describe('ImgUrl API', () => {
     expect(second.body.next).toBeUndefined();
   });
 
+  it('treats a malformed cursor as the first page instead of failing', async () => {
+    const res = await http().get('/api/files?cursor=not-base-64').set('Cookie', cookie).expect(200);
+    expect(res.body.items.length).toBeGreaterThan(0);
+  });
+
   it('deletes the object and the row, then 404s the link', async () => {
     await http().delete(`/api/files/${pngId}`).set('Cookie', cookie).expect(204);
     expect(storage.removed.length).toBeGreaterThan(0);
     await http().get(`/f/${pngId}`).expect(404);
     const list = await http().get('/api/files').set('Cookie', cookie).expect(200);
     expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(pngId);
+  });
+
+  it('still deletes the row when B2 refuses the delete', async () => {
+    const created = await http()
+      .post('/api/files')
+      .set('Cookie', cookie)
+      .attach('file', PNG, 'keep.png')
+      .expect(201);
+
+    storage.failRemove = true;
+    await http().delete(`/api/files/${created.body.id}`).set('Cookie', cookie).expect(204);
+    storage.failRemove = false;
+
+    await http().get(`/f/${created.body.id}`).expect(404);
   });
 
   it('creates an api key and uploads with it', async () => {
@@ -125,10 +144,14 @@ describe('ImgUrl API', () => {
 
     const res = await http()
       .post('/api/v1/files')
-      .set('Authorization', `Bearer ${apiKey}`)
+      .set('Authorization', `bearer ${apiKey}`)
       .attach('file', PNG, 'bot.png')
       .expect(201);
     expect(res.body.id).toHaveLength(10);
+  });
+
+  it('404s deleting a key that does not exist', async () => {
+    await http().delete('/api/keys/does-not-exist').set('Cookie', cookie).expect(404);
   });
 
   it('rejects a revoked key', async () => {

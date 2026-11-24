@@ -24,9 +24,9 @@ export function sniffMime(buffer: Buffer): string | null {
 }
 
 export function kindOf(mime: string | null): Kind | null {
-  if (!mime) return null;
-  // SVG can carry script; never serve it from our own origin.
-  if (mime === 'image/svg+xml') return null;
+  // Only types we can name, serve with the right Content-Type and render.
+  // That also drops image/svg+xml, which can carry script.
+  if (!mime || !EXTENSIONS[mime]) return null;
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
   return null;
