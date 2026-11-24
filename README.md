@@ -16,7 +16,7 @@ https://your-name.duckdns.org/f/AbC123xYz9
 
 ```
 Internet ──▶ Caddy (HTTPS, one DuckDNS name)
-              ├── /f/*    ──▶ NestJS ──302──▶ Backblaze B2 (presigned, 5 min)
+              ├── /f/*    ──▶ NestJS ──302──▶ Backblaze B2 (presigned, 12 h)
               ├── /api/*  ──▶ NestJS ──▶ MongoDB
               └── else    ──▶ Next.js (login + admin panel)
 ```
@@ -28,9 +28,33 @@ are unguessable but public to anyone who has one.
 
 ### 1. DuckDNS
 
-Create a subdomain at <https://www.duckdns.org>, point it at your server's IPv4
-address, and open ports **80** and **443**. Caddy gets a Let's Encrypt
-certificate over HTTP-01 on first start — no DNS plugin needed.
+DuckDNS does one job: it makes `myimages.duckdns.org` resolve to your server. It
+provides no certificate and no proxy. Caddy gets a normal Let's Encrypt
+certificate over **HTTP-01** the first time it starts — no certbot, no renewal
+cron, no DNS plugin.
+
+1. Create a name at <https://www.duckdns.org> (say `myimages`) and copy the token
+   shown on the dashboard.
+2. Point the name at the server, either way:
+   - paste the server's IPv4 into the DuckDNS dashboard, or
+   - run `DUCKDNS_TOKEN=xxx sh scripts/duckdns.sh` — it asks DuckDNS to use the
+     address the request came from, so it works on a machine with a changing IP.
+3. Open **80** and **443** on the server: `ufw allow 80,443/tcp`.
+
+If your IP changes, let cron keep it current — no app restart needed:
+
+```cron
+*/10 * * * * cd /opt/imgurl && DUCKDNS_TOKEN=xxx sh scripts/duckdns.sh >/dev/null 2>&1
+```
+
+Two limits worth knowing before you start:
+
+- **No wildcard.** DuckDNS gives one name, so `abc.myimages.duckdns.org` will not
+  resolve. That is why file links are `https://myimages.duckdns.org/f/<id>` and
+  not per-file subdomains.
+- **Resolve first.** The name must point at the server before the first
+  `docker compose up`, or Caddy's first certificate attempt fails. It retries on
+  its own, so a wrong order costs a few minutes rather than a broken install.
 
 ### 2. Backblaze B2
 
