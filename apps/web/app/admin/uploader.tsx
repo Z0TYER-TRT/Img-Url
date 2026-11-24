@@ -28,13 +28,6 @@ export default function Uploader() {
     seen.current = results.length;
   }, [results.length]);
 
-  // The ⌘K palette can ask for the file picker without owning it.
-  useEffect(() => {
-    const pick = () => picker.current?.click();
-    window.addEventListener('imgurl:pick', pick);
-    return () => window.removeEventListener('imgurl:pick', pick);
-  }, []);
-
   // The API decides what is acceptable; pre-checking here would duplicate
   // MAX_UPLOAD_MB and reject valid files the OS reports without a mime type.
   async function run(files: File[]) {
@@ -92,12 +85,9 @@ export default function Uploader() {
   }
 
   return (
-    <section className="section" id="upload">
-      <h2>Upload</h2>
-
-      <div>
-        <div
-          className={over ? 'drop over' : 'drop'}
+    <div>
+      <div
+        className={over ? 'drop over' : 'drop'}
           onDragOver={(event) => {
             event.preventDefault();
             setOver(true);
@@ -185,6 +175,5 @@ export default function Uploader() {
           ))}
         </div>
       </div>
-    </section>
   );
 }

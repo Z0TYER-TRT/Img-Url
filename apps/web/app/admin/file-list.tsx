@@ -59,11 +59,8 @@ export default function FileList() {
   }
 
   return (
-    <section className="section" id="library">
-      <h2>Library</h2>
-
-      <div>
-        {!loading && items.length === 0 && !error && (
+    <div>
+      {!loading && items.length === 0 && !error && (
           <div>
             <p className="empty">Nothing here yet.</p>
             <p>Files you upload appear here with their links.</p>
@@ -128,6 +125,5 @@ export default function FileList() {
           )}
         </p>
       </div>
-    </section>
   );
 }

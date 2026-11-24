@@ -112,13 +112,8 @@ export default function ApiDocs({ origin }: { origin: string }) {
   }
 
   return (
-    <div className="docs" id="api">
-      <div className="docs-head">
-        <h3>From your bot</h3>
-        <span className="muted">Send the file, get the link back. Same call for images and video.</span>
-      </div>
-
-      <div className="field" style={{ marginTop: 12 }}>
+    <div className="docs">
+      <div className="field">
         <span>API base URL</span>
         <div className="endpoint">
           <code>{endpoint}</code>

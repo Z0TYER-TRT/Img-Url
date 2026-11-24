@@ -1,37 +1,38 @@
 'use client';
 
 import {
+  Code2,
   Images,
   KeyRound,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-  Terminal,
   UploadCloud,
   type LucideIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { listFiles } from '@/lib/api';
 import ThemeToggle from '../theme-toggle';
 
-type Section = { id: string; label: string; icon: LucideIcon };
+type Page = { href: string; label: string; icon: LucideIcon; badge?: boolean };
 
-const GROUPS: Array<{ heading?: string; items: Section[] }> = [
+const GROUPS: Array<{ heading?: string; items: Page[] }> = [
   {
     items: [
-      { id: 'upload', label: 'Upload', icon: UploadCloud },
-      { id: 'library', label: 'Library', icon: Images },
+      { href: '/admin', label: 'Upload', icon: UploadCloud },
+      { href: '/admin/library', label: 'Library', icon: Images, badge: true },
     ],
   },
   {
     heading: 'Manage',
-    items: [{ id: 'keys', label: 'API keys', icon: KeyRound }],
+    items: [{ href: '/admin/keys', label: 'API', icon: KeyRound }],
   },
   {
     heading: 'Developers',
-    items: [{ id: 'api', label: 'API', icon: Terminal }],
+    items: [{ href: '/admin/developers', label: 'Developers', icon: Code2 }],
   },
 ];
 
@@ -45,31 +46,11 @@ export default function Sidebar({
   onToggle: () => void;
 }) {
   const router = useRouter();
-  const [active, setActive] = useState('upload');
+  const pathname = usePathname();
   const [total, setTotal] = useState<number | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
-
-  // Scroll-spy over the four sections.
-  useEffect(() => {
-    const targets = GROUPS.flatMap((group) => group.items)
-      .map((item) => document.getElementById(item.id))
-      .filter((element): element is HTMLElement => Boolean(element));
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      { rootMargin: '-15% 0px -55% 0px', threshold: 0 },
-    );
-
-    targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
-  }, []);
 
   // Real library size for the badge, refreshed whenever the collection changes.
   useEffect(() => {
@@ -87,21 +68,12 @@ export default function Sidebar({
     () => [
       ...GROUPS.flatMap((group) =>
         group.items.map((item) => ({
-          id: `go-${item.id}`,
+          id: `go-${item.href}`,
           label: `Go to ${item.label}`,
-          hint: 'Section',
-          run: () => go(item.id),
+          hint: 'Page',
+          run: () => router.push(item.href),
         })),
       ),
-      {
-        id: 'pick',
-        label: 'Choose files to upload',
-        hint: 'Upload',
-        run: () => {
-          window.dispatchEvent(new Event('imgurl:pick'));
-          document.getElementById('upload')?.scrollIntoView({ block: 'start' });
-        },
-      },
       {
         id: 'logout',
         label: 'Log out',
@@ -109,6 +81,7 @@ export default function Sidebar({
         run: () => void logout(),
       },
     ],
+    // Command list is static; logout/router are stable enough for this screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -117,7 +90,6 @@ export default function Sidebar({
     command.label.toLowerCase().includes(query.trim().toLowerCase()),
   );
 
-  // ⌘K / Ctrl+K anywhere, Escape closes.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -132,12 +104,11 @@ export default function Sidebar({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  function go(id: string) {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById(id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-    setActive(id);
+  // Navigating away closes any open palette.
+  useEffect(() => {
     setPaletteOpen(false);
-  }
+    setQuery('');
+  }, [pathname]);
 
   function run(command: (typeof commands)[number]) {
     setPaletteOpen(false);
@@ -171,7 +142,9 @@ export default function Sidebar({
     <>
       <aside className="rail">
         <div className="rail-head">
-          <span className="wordmark">imgurl</span>
+          <Link href="/admin" className="wordmark">
+            imgurl
+          </Link>
           <button
             className="icon-btn rail-toggle"
             type="button"
@@ -179,7 +152,11 @@ export default function Sidebar({
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {collapsed ? <PanelLeftOpen size={16} strokeWidth={1.6} /> : <PanelLeftClose size={16} strokeWidth={1.6} />}
+            {collapsed ? (
+              <PanelLeftOpen size={16} strokeWidth={1.6} />
+            ) : (
+              <PanelLeftClose size={16} strokeWidth={1.6} />
+            )}
           </button>
         </div>
 
@@ -194,26 +171,25 @@ export default function Sidebar({
           <kbd className="nav-kbd">Ctrl K</kbd>
         </button>
 
-        <nav className="rail-nav" aria-label="Sections">
+        <nav className="rail-nav" aria-label="Pages">
           {GROUPS.map((group, index) => (
             <div className="rail-group" key={group.heading ?? `group-${index}`}>
               {group.heading && <span className="rail-group-heading">{group.heading}</span>}
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const badge = item.id === 'library' && total !== null ? total : undefined;
+                const active = pathname === item.href;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
+                  <Link
+                    key={item.href}
+                    href={item.href}
                     className="rail-link"
-                    aria-current={active === item.id ? 'true' : undefined}
+                    aria-current={active ? 'page' : undefined}
                     title={collapsed ? item.label : undefined}
-                    onClick={() => go(item.id)}
                   >
                     <Icon size={16} strokeWidth={1.6} />
                     <span className="nav-label">{item.label}</span>
-                    {badge !== undefined && <span className="nav-badge">{badge}</span>}
-                  </button>
+                    {item.badge && total !== null && <span className="nav-badge">{total}</span>}
+                  </Link>
                 );
               })}
             </div>
@@ -223,7 +199,13 @@ export default function Sidebar({
         <div className="rail-foot">
           <span className="identity">{email}</span>
           <ThemeToggle />
-          <button className="icon-btn" type="button" onClick={() => void logout()} aria-label="Log out" title="Log out">
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => void logout()}
+            aria-label="Log out"
+            title="Log out"
+          >
             <LogOut size={16} strokeWidth={1.6} />
           </button>
         </div>
@@ -242,8 +224,8 @@ export default function Sidebar({
                   setQuery(event.target.value);
                   setCursor(0);
                 }}
-                placeholder="Jump to a section or run a command"
-                aria-label="Search commands"
+                placeholder="Jump to a page"
+                aria-label="Search pages"
               />
               <kbd className="nav-kbd">Esc</kbd>
             </div>

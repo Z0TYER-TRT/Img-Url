@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Sidebar from './sidebar';
-import Uploader from './uploader';
-import FileList from './file-list';
-import Keys from './keys';
 
-export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: string }) {
+export default function Shell({ email, children }: { email: string; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -32,14 +29,7 @@ export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: 
   return (
     <div className="shell" data-collapsed={collapsed ? 'true' : 'false'}>
       <Sidebar email={email} collapsed={collapsed} onToggle={toggle} />
-
-      <main className="content">
-        <div className="wrap">
-          <Uploader />
-          <FileList />
-          <Keys apiOrigin={apiOrigin} />
-        </div>
-      </main>
+      <main className="content">{children}</main>
     </div>
   );
 }

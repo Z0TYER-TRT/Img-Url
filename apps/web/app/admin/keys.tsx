@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { copyText, createKey, deleteKey, listKeys, type KeyItem } from '@/lib/api';
 import { popIn } from '@/lib/motion';
-import ApiDocs from './api-docs';
 
 function day(iso: string | null) {
   if (!iso) return 'Never';
@@ -14,7 +13,7 @@ function day(iso: string | null) {
   });
 }
 
-export default function Keys({ apiOrigin }: { apiOrigin: string }) {
+export default function Keys() {
   const [items, setItems] = useState<KeyItem[]>([]);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -75,11 +74,8 @@ export default function Keys({ apiOrigin }: { apiOrigin: string }) {
   }
 
   return (
-    <section className="section" id="keys">
-      <h2>API keys</h2>
-
-      <div>
-        {!loading && items.length === 0 && (
+    <div>
+      {!loading && items.length === 0 && (
           <p className="muted">No keys yet. Make one for a bot that uploads.</p>
         )}
 
@@ -158,12 +154,9 @@ export default function Keys({ apiOrigin }: { apiOrigin: string }) {
           </div>
         )}
 
-        <p className="status" aria-live="polite">
-          {error ? <span className="error">{error}</span> : message}
-        </p>
-
-        <ApiDocs origin={apiOrigin} />
-      </div>
-    </section>
+      <p className="status" aria-live="polite">
+        {error ? <span className="error">{error}</span> : message}
+      </p>
+    </div>
   );
 }
