@@ -24,11 +24,11 @@ export default function Panel({ email }: { email: string }) {
   return (
     <>
       <header className="bar">
-        <strong>imgurl</strong>
+        <span className="wordmark">imgurl</span>
         <span className="spacer" />
-        <span className="muted name">{email}</span>
-        <button className="btn" type="button" onClick={logout} disabled={pending}>
-          {pending ? 'Signing out...' : 'Log out'}
+        <span className="identity">{email}</span>
+        <button className="btn-quiet" type="button" onClick={logout} disabled={pending}>
+          {pending ? 'Signing out' : 'Log out'}
         </button>
       </header>
 

@@ -57,7 +57,7 @@ try {
   const home = await waitFor(`http://127.0.0.1:${WEB_PORT}/`);
   const body = await home.text();
   check('login page returns 200', home.status === 200, `status ${home.status}`);
-  check('login page renders the sign-in copy', body.includes('Sign in to manage your uploads'));
+  check('login page renders the sign-in heading', body.includes('<h1>Sign in</h1>'));
 
   const admin = await waitFor(`http://127.0.0.1:${WEB_PORT}/admin`);
   check('admin redirects when unauthenticated', admin.status >= 300 && admin.status < 400, `status ${admin.status}`);

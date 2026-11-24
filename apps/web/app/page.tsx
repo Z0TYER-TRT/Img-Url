@@ -14,14 +14,17 @@ export default async function Home() {
   if (me?.ok) redirect('/admin');
 
   return (
-    <main className="center">
-      <div className="card">
-        <div>
-          <h1>imgurl</h1>
-          <p className="muted">Sign in to manage your uploads.</p>
+    <div className="login">
+      <header className="bar">
+        <span className="wordmark">imgurl</span>
+      </header>
+
+      <main>
+        <div className="panel">
+          <h1>Sign in</h1>
+          <LoginForm />
         </div>
-        <LoginForm />
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -68,12 +68,12 @@ export default function LoginForm() {
         />
       </label>
 
-      <button className="btn btn-primary" type="submit" disabled={pending}>
-        {pending ? 'Signing in...' : 'Sign in'}
+      <button className="btn btn-mark" type="submit" disabled={pending}>
+        {pending ? 'Signing in' : 'Sign in'}
       </button>
 
       <p className="status" aria-live="polite">
-        <span className="error">{error}</span>
+        {error ? <span className="error">{error}</span> : null}
       </p>
     </form>
   );

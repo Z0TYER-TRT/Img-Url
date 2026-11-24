@@ -56,7 +56,7 @@ export default function Keys() {
   }
 
   async function remove(item: KeyItem) {
-    if (!window.confirm(`Delete key "${item.name}"? Apps using it will stop working.`)) return;
+    if (!window.confirm(`Delete key "${item.name}"? Apps using it stop working.`)) return;
     setError('');
     try {
       await deleteKey(item.id);
@@ -68,71 +68,93 @@ export default function Keys() {
   }
 
   return (
-    <section className="card">
+    <section className="section">
       <h2>API keys</h2>
 
-      <div className="list">
-        {items.map((item) => (
-          <div className="row" key={item.id}>
-            <div className="grow">
-              <div className="name">{item.name}</div>
-              <div className="meta">
-                <code>{item.prefix}...</code>
-                <span>created {day(item.createdAt)}</span>
-                <span>last used {day(item.lastUsedAt)}</span>
-              </div>
-            </div>
-            <button className="btn btn-danger" type="button" onClick={() => void remove(item)}>
-              Delete
-            </button>
+      <div>
+        {!loading && items.length === 0 && (
+          <p className="muted">No keys yet. Make one for a bot that uploads.</p>
+        )}
+
+        {items.length > 0 && (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="keys">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Key</th>
+                  <th>Created</th>
+                  <th>Last used</th>
+                  <th className="right">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>
+                      <code>{item.prefix}…</code>
+                    </td>
+                    <td>{day(item.createdAt)}</td>
+                    <td>{day(item.lastUsedAt)}</td>
+                    <td className="right">
+                      <button
+                        className="btn-quiet"
+                        type="button"
+                        onClick={() => void remove(item)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        )}
 
-      {!loading && items.length === 0 && (
-        <p className="muted">No API keys yet.</p>
-      )}
-
-      <form className="row" onSubmit={onCreate}>
-        <label className="field grow">
-          <span>New key name</span>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. sharex"
-            disabled={pending}
-          />
-        </label>
-        <button className="btn" type="submit" disabled={pending || !name.trim()}>
-          {pending ? 'Creating...' : 'Create key'}
-        </button>
-      </form>
-
-      {created && (
-        <div className="key-warn">
-          <p>
-            Copy this now — it will not be shown again.
-          </p>
-          <div className="url-row">
-            <label className="sr-only" htmlFor="new-key">
-              New API key
-            </label>
+        <form className="form-row" onSubmit={onCreate}>
+          <label className="field">
+            <span>Name for the new key</span>
             <input
-              id="new-key"
-              readOnly
-              value={created.key}
-              onFocus={(event) => event.currentTarget.select()}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="discord-bot"
+              disabled={pending}
             />
-            <button className="btn btn-primary" type="button" onClick={() => void onCopy()}>
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
+          </label>
+          <button className="btn btn-mark" type="submit" disabled={pending || !name.trim()}>
+            {pending ? 'Creating' : 'Create key'}
+          </button>
+        </form>
 
-      <p className="status" aria-live="polite">
-        {error ? <span className="error">{error}</span> : message}
-      </p>
+        {created && (
+          <div className="mark-box">
+            <p>Copy it now. It is not shown again.</p>
+            <div className="link-row">
+              <label className="sr-only" htmlFor="new-key">
+                New API key
+              </label>
+              <input
+                id="new-key"
+                readOnly
+                value={created.key}
+                style={{ background: 'var(--paper)' }}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button className="btn" type="button" onClick={() => void onCopy()}>
+                Copy
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="status" aria-live="polite">
+          {error ? <span className="error">{error}</span> : message}
+        </p>
+      </div>
     </section>
   );
 }

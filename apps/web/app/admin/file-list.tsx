@@ -43,7 +43,7 @@ export default function FileList() {
   }
 
   async function remove(item: FileItem) {
-    if (!window.confirm(`Delete ${item.name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${item.name}? The link stops working and cannot be restored.`)) return;
     setError('');
     try {
       await deleteFile(item.id);
@@ -55,55 +55,75 @@ export default function FileList() {
   }
 
   return (
-    <section className="card">
+    <section className="section">
       <h2>Library</h2>
 
-      {!loading && items.length === 0 && !error && (
-        <p className="muted">No files yet. Upload something above.</p>
-      )}
-
-      <div className="list">
-        {items.map((item) => (
-          <div className="row" key={item.id}>
-            {item.kind === 'image' ? (
-              <img className="thumb" src={item.url} alt="" loading="lazy" />
-            ) : (
-              <video className="thumb" src={item.url} controls preload="metadata" />
-            )}
-
-            <div className="grow">
-              <div className="name" title={item.name}>
-                {item.name}
-              </div>
-              <div className="meta">
-                <span>{item.kind}</span>
-                <span>{formatBytes(item.size)}</span>
-                <span>{item.views} views</span>
-                <time dateTime={item.createdAt}>{day(item.createdAt)}</time>
-              </div>
-            </div>
-
-            <div className="row">
-              <button className="btn" type="button" onClick={() => void copy(item.url)}>
-                Copy link
-              </button>
-              <button className="btn btn-danger" type="button" onClick={() => void remove(item)}>
-                Delete
-              </button>
-            </div>
+      <div>
+        {!loading && items.length === 0 && !error && (
+          <div>
+            <p className="empty">Nothing here yet.</p>
+            <p>Files you upload appear here with their links.</p>
           </div>
-        ))}
+        )}
+
+        {items.length > 0 && (
+          <div className="sheet">
+            {items.map((item) => (
+              <figure className="tile" key={item.id}>
+                <div className="frame">
+                  {item.kind === 'image' ? (
+                    <img src={item.url} alt="" loading="lazy" />
+                  ) : (
+                    <video src={item.url} controls preload="metadata" />
+                  )}
+
+                  <div className="tile-actions">
+                    <button className="chip" type="button" onClick={() => void copy(item.url)}>
+                      Copy link
+                    </button>
+                    <button
+                      className="chip chip-danger"
+                      type="button"
+                      onClick={() => void remove(item)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <figcaption className="caption">
+                  <span className="name" title={item.name}>
+                    {item.name}
+                  </span>
+                  <span className="meta">
+                    <span>{formatBytes(item.size)}</span>
+                    <span>{item.views} views</span>
+                    <time dateTime={item.createdAt}>{day(item.createdAt)}</time>
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+
+        {cursor && (
+          <div className="more">
+            <button className="btn" type="button" disabled={loading} onClick={() => void load(cursor)}>
+              {loading ? 'Loading' : 'Load more'}
+            </button>
+          </div>
+        )}
+
+        <p className="status" aria-live="polite">
+          {error ? (
+            <span className="error">{error}</span>
+          ) : loading && items.length === 0 ? (
+            'Loading files'
+          ) : (
+            message
+          )}
+        </p>
       </div>
-
-      {cursor && (
-        <button className="btn" type="button" disabled={loading} onClick={() => void load(cursor)}>
-          {loading ? 'Loading...' : 'Load more'}
-        </button>
-      )}
-
-      <p className="status" aria-live="polite">
-        {error ? <span className="error">{error}</span> : loading && items.length === 0 ? 'Loading files...' : message}
-      </p>
     </section>
   );
 }
