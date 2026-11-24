@@ -4,7 +4,7 @@ A self-hosted image and video host. Upload a file, get a permanent public link.
 One admin, no signups, no third-party CDN.
 
 ```
-https://your-name.duckdns.org/f/AbC123xYz9
+https://myimages.duckdns.org/f/AbC123xYz9
 ```
 
 - Files live in **Backblaze B2** (1 to 10 buckets, uploads spread across them).
@@ -21,10 +21,35 @@ Internet ──▶ Caddy (HTTPS, one DuckDNS name)
               └── else    ──▶ Next.js (login + admin panel)
 ```
 
-An unknown link id is a 404. Ids are 10 random alphanumeric characters, so links
-are unguessable but public to anyone who has one.
+Ids are 10 random alphanumeric characters, so links are unguessable but public to
+anyone who has one. An unknown id is a 404, never an error page.
 
-## Deploy (5 steps)
+## What you get
+
+Four pages behind one login, all at the same hostname:
+
+| Page | URL | What it does |
+|---|---|---|
+| Upload | `/admin` | drop a file, copy the link |
+| Library | `/admin/library` | contact sheet of everything, copy or delete |
+| API | `/admin/keys` | create and revoke bot keys |
+| Developers | `/admin/developers` | the endpoint plus cURL, Python, Node and PHP examples |
+
+The sidebar collapses, `Ctrl K` jumps between pages, and the theme toggle is
+light or dark — decided on the server, so a reload never flashes the wrong one.
+
+## Requirements
+
+- A VPS with Docker and Compose v2. **1 vCPU / 1 GB RAM / 10 GB disk** runs it;
+  2 GB is comfortable, since MongoDB takes a share of RAM for its cache. Media
+  never lands on the disk, only MongoDB metadata.
+- Ports **80** and **443** reachable from the internet (Caddy needs 80 for the
+  certificate).
+- A DuckDNS name and one Backblaze B2 account.
+- Uploads pass through the VPS, so its upload bandwidth is your ceiling while a
+  file is being stored. A 50 MB clip takes as long as your line allows.
+
+## Deploy
 
 ### 1. DuckDNS
 
@@ -56,6 +81,12 @@ Two limits worth knowing before you start:
   `docker compose up`, or Caddy's first certificate attempt fails. It retries on
   its own, so a wrong order costs a few minutes rather than a broken install.
 
+Check it before moving on:
+
+```bash
+dig +short myimages.duckdns.org     # must print your server's IPv4
+```
+
 ### 2. Backblaze B2
 
 1. Create a **private** bucket, note its region (e.g. `us-west-004`).
@@ -67,62 +98,136 @@ Two limits worth knowing before you start:
    different regions; each entry carries its own.
 
 Uploads go to the account holding the fewest files, and fall through to the next
-one if a bucket rejects the write. The `.env.example` shows the exact JSON for
-one account and for three.
+one if a bucket rejects the write. `.env.example` shows the exact JSON for one
+account and for three.
 
-Each file records the **bucket name** it lives in, so later edits to this list
-are safe. Never delete a bucket you still have files in — those links become 404.
+Never delete a bucket you still have files in — those links become 404.
 
-### 3. Configure
+### 3. Get the code
+
+```bash
+git clone <your-fork> /opt/imgurl
+cd /opt/imgurl
+```
+
+### 4. Configure
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in `PUBLIC_HOST`, `PUBLIC_ORIGIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-(8–15 characters), `SESSION_SECRET` (`openssl rand -hex 32`) and `B2_ACCOUNTS`.
+| Variable | What to put |
+|---|---|
+| `PUBLIC_HOST` | `myimages.duckdns.org` — Caddy uses it for the certificate |
+| `PUBLIC_ORIGIN` | `https://myimages.duckdns.org` — the base of every generated link |
+| `ADMIN_EMAIL` | your Gmail, used as the login name |
+| `ADMIN_PASSWORD` | 8–15 characters |
+| `SESSION_SECRET` | `openssl rand -hex 32` — changing it logs out every session |
+| `B2_ACCOUNTS` | the JSON array from step 2 |
+| `DUCKDNS_TOKEN` | optional, only for `scripts/duckdns.sh` |
+| `MAX_UPLOAD_MB` | 50 unless you want another cap |
 
-### 4. Start
+`PUBLIC_ORIGIN` is the one value to get right: links are built from it, not from
+the request, so a wrong host produces working uploads with broken links.
+
+The app refuses to boot on a missing variable, a password outside 8–15, a
+`SESSION_SECRET` shorter than 32 characters, more than 10 accounts, a duplicate
+bucket, or the example secrets from `.env.example`.
+
+### 5. Start
 
 ```bash
 docker compose up -d --build
+docker compose ps
 ```
 
-### 5. Log in
+All four services should be `running`, and `api` should say `healthy` within a
+few seconds. That means MongoDB is reachable and the configuration parsed.
 
-Open `https://<PUBLIC_HOST>` and sign in with the env credentials. Upload
-something, copy the link, open it in a private window.
+### 6. Verify
+
+```bash
+curl -s https://myimages.duckdns.org/health      # {"ok":true,"mongo":"up"}
+curl -sI https://myimages.duckdns.org | head -1  # HTTP/2 200, valid certificate
+```
+
+Then open `https://<PUBLIC_HOST>`, sign in, upload a small image, copy the link
+and open it in a private window. For a real bucket, work through
+[`docs/smoke.md`](docs/smoke.md) — it covers the things unit tests cannot: a real
+B2 write, a video seek, and deleting a link.
+
+## Operating it
+
+```bash
+docker compose logs -f api        # or caddy, web, mongo
+docker compose restart api
+docker compose down               # stop, keep data
+docker compose up -d              # start again
+```
+
+**Update** after pulling a new version:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Changed something in `.env`? `docker compose up -d` re-creates the containers with
+the new values; nothing else to restart.
+
+**Backup.** B2 already holds the bytes; back up the metadata:
+
+```bash
+docker compose exec -T mongo mongodump --archive --gzip > imgurl-$(date +%F).gz
+gunzip -c imgurl-2026-11-25.gz | docker compose exec -T mongo mongorestore --archive --gzip
+```
+
+Losing MongoDB loses the index, not the files: the objects stay in B2 but the
+links and their ids are gone.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Caddy logs `acme: ... could not get certificate` | DNS not pointing here yet, or port 80 blocked | `dig +short <host>`, `ufw allow 80`, then `docker compose restart caddy` |
+| Browser shows `502 Bad Gateway` | the API container stopped | `docker compose logs api` |
+| Upload returns `503` with `All N storage account(s) failed` | wrong `keyId`, `appKey` or bucket name | the panel shows the B2 reply; recheck the key's bucket and capabilities |
+| Upload returns `413` | file over `MAX_UPLOAD_MB` | raise the limit and `docker compose up -d`, or use a smaller file |
+| Login suddenly returns 401 with the right password | `ADMIN_PASSWORD` or `SESSION_SECRET` changed | sign in again; old cookies are invalidated on purpose |
+| An old link now 404s | its bucket was removed from `B2_ACCOUNTS` | put the entry back exactly as it was |
+| `docker compose up` fails with `port is already allocated` | something else owns 80/443 | stop it: `ss -lptn 'sport = :80'` |
 
 ## API for bots
 
-Create a key in the panel under **API keys**. The raw key is shown once.
+Create a key on the **API** page. The raw key is shown once.
 
 ```bash
 curl -H "Authorization: Bearer ik_..." \
      -F "file=@photo.png" \
-     https://your-name.duckdns.org/api/v1/files
+     https://myimages.duckdns.org/api/v1/files
 ```
 
 ```json
-{ "id": "AbC123xYz9", "url": "https://your-name.duckdns.org/f/AbC123xYz9",
+{ "id": "AbC123xYz9", "url": "https://myimages.duckdns.org/f/AbC123xYz9",
   "kind": "image", "mime": "image/png", "size": 48213, "name": "photo.png",
   "views": 0, "createdAt": "2026-11-25T10:00:00.000Z" }
 ```
 
-Limits: 50MB per file, 30 uploads per minute per key, images and videos only
-(decided by the file's bytes, not its name or the header the client sends).
+Limits: 50 MB per file, 30 uploads per minute per key, images and videos only —
+decided by the file's bytes, not its name or the header the client sends. The
+**Developers** page shows the same examples in cURL, Python, Node and PHP with a
+copy button.
 
-Anything that speaks HTTP works: Telegram bots, Discord bots, shell scripts,
-your own services.
+Bots can only upload. Listing and deleting need the admin cookie.
 
 ## Costs and limits
 
-- **B2 free egress is 3× your stored data per month**, then $0.01/GB. Every
-  full view of a video counts, so a 40MB clip watched 100 times is 4GB.
-  Free egress through Cloudflare is possible later, but this project
-  deliberately does not require Cloudflare.
-- Storage is $6.95/TB/month; the first 10GB are free.
-- Caddy, MongoDB and Next.js need roughly 512MB of RAM together.
+- **B2 free egress is 3× your stored data per month**, then $0.01/GB. Every full
+  view of a video counts, so a 40 MB clip watched 100 times is 4 GB. Free egress
+  through Cloudflare is possible later, but this project deliberately does not
+  require Cloudflare.
+- Storage is $6.95/TB/month; the first 10 GB are free.
+- Caddy, MongoDB and Next.js need roughly 512 MB of RAM together.
 - The redirect URL is signed for **12 hours**. Browsers follow the 302 once and
   keep using that URL for range requests, so a long video keeps seeking without
   going back through `/f/<id>`. Re-opening the share link always mints a fresh one.
@@ -137,37 +242,40 @@ npm --workspace apps/api run start:dev
 npm --workspace apps/web run dev
 ```
 
-The web app rewrites `/api/*` and `/f/*` to `http://localhost:3001` in dev.
+The web app rewrites `/api/*` and `/f/*` to `http://localhost:3001` in dev, so the
+browser only ever talks to one origin and cookies work unchanged.
 
 ## Tests
 
 ```bash
-npm --workspace apps/api test         # unit: config, mime sniffing, storage, keys, rate limit
-npm --workspace apps/api run test:e2e  # full HTTP flow against in-memory Mongo and fake B2
+npm --workspace apps/api test          # unit: config, mime sniffing, storage, keys, rate limit
+npm --workspace apps/api run test:e2e  # HTTP flow against in-memory Mongo and a fake B2
 npm --workspace apps/web run build     # type-check and production build
-npm --workspace apps/web run test:smoke # boots the built server against a stub API
+npm --workspace apps/web run test:smoke  # boots the built server against a stub API
 ```
 
-`test:smoke` needs `npm --workspace apps/web run build` first. It starts the
-real standalone server, points it at a stub API that always returns 401, and
-checks the login page renders and `/admin` redirects away.
+`test:smoke` needs the web build first. It starts the real standalone server,
+points it at a stub API that always returns 401, and checks the login page renders
+and `/admin` redirects away.
 
 The e2e suite covers login, cookie auth, upload, magic-byte rejection, the 413
-cap, the public redirect, view counting, pagination, delete, API keys and
-revocation.
+cap, the public redirect, view counting, pagination and its total, delete, API
+keys and revocation.
 
 ## Security notes
 
-- One admin account from env; password stored nowhere but the hash comparison
-  at boot. The session is an HttpOnly, SameSite=Lax JWT cookie, `Secure` in
-  production. The cookie carries a fingerprint of the current password, so
-  changing `ADMIN_PASSWORD` or `SESSION_SECRET` logs out every existing session.
+- One admin account from env. The password is never stored; the comparison is
+  timing-safe, and the session cookie carries a fingerprint of the current
+  password, so changing `ADMIN_PASSWORD` or `SESSION_SECRET` logs out every
+  existing session. The cookie is HttpOnly, SameSite=Lax and `Secure` in
+  production.
 - Login is limited to 5 requests per minute per IP (successful logins count too).
 - Uploads are validated by magic bytes; only image and video types the server can
   name are accepted, so SVG (which can carry script) and TIFF are rejected.
 - Buckets stay private. Public links are 302s to short-lived presigned URLs.
-- MongoDB is not exposed to the host; it is only reachable on the compose
-  network.
+- Files are served from Backblaze's domain, never from your origin, so a hostile
+  file cannot run script in the panel's context.
+- MongoDB and the API are not published to the host; only Caddy listens publicly.
 
 ## License
 
