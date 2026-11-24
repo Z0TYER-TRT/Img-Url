@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import ThemeToggle from '../theme-toggle';
 import Uploader from './uploader';
 import FileList from './file-list';
 import Keys from './keys';
@@ -27,6 +28,7 @@ export default function Panel({ email }: { email: string }) {
         <span className="wordmark">imgurl</span>
         <span className="spacer" />
         <span className="identity">{email}</span>
+        <ThemeToggle />
         <button className="btn-quiet" type="button" onClick={logout} disabled={pending}>
           {pending ? 'Signing out' : 'Log out'}
         </button>

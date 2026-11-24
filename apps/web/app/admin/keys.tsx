@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { copyText, createKey, deleteKey, listKeys, type KeyItem } from '@/lib/api';
+import { popIn } from '@/lib/motion';
 
 function day(iso: string | null) {
   if (!iso) return 'Never';
@@ -20,6 +21,11 @@ export default function Keys() {
   const [created, setCreated] = useState<{ id: string; name: string; key: string } | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const reveal = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (created) popIn(reveal.current);
+  }, [created]);
 
   useEffect(() => {
     listKeys()
@@ -131,7 +137,7 @@ export default function Keys() {
         </form>
 
         {created && (
-          <div className="mark-box">
+          <div className="mark-box" ref={reveal}>
             <p>Copy it now. It is not shown again.</p>
             <div className="link-row">
               <label className="sr-only" htmlFor="new-key">

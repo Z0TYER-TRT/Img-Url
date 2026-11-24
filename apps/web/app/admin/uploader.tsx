@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { absoluteUrl, copyText, errorText, formatBytes } from '@/lib/api';
+import { popIn, pulse } from '@/lib/motion';
 
 type Result = {
   id: string;
@@ -19,6 +20,13 @@ export default function Uploader() {
   const [error, setError] = useState('');
   const [over, setOver] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const seen = useRef(0);
+
+  useEffect(() => {
+    if (results.length > seen.current) popIn(list.current?.querySelector('.result'));
+    seen.current = results.length;
+  }, [results.length]);
 
   // The API decides what is acceptable; pre-checking here would duplicate
   // MAX_UPLOAD_MB and reject valid files the OS reports without a mime type.
@@ -68,9 +76,11 @@ export default function Uploader() {
     take(event.dataTransfer.files);
   }
 
-  async function copy(url: string) {
-    setMessage((await copyText(absoluteUrl(url))) ? 'Link copied.' : '');
+  async function copy(result: Result) {
+    const copied = await copyText(absoluteUrl(result.url));
+    setMessage(copied ? 'Link copied.' : '');
     setError('');
+    if (copied) pulse(document.getElementById(`url-${result.id}`)?.closest('.result'));
   }
 
   return (
@@ -132,8 +142,9 @@ export default function Uploader() {
           {error ? <span className="error">{error}</span> : message}
         </p>
 
-        {results.map((result) => (
-          <div className="result" key={result.id}>
+        <div ref={list}>
+          {results.map((result) => (
+            <div className="result" key={result.id}>
             <div className="frame">
               {result.kind === 'image' ? (
                 <img src={result.url} alt="" />
@@ -153,7 +164,7 @@ export default function Uploader() {
                   value={absoluteUrl(result.url)}
                   onFocus={(event) => event.currentTarget.select()}
                 />
-                <button className="btn" type="button" onClick={() => void copy(result.url)}>
+                <button className="btn" type="button" onClick={() => void copy(result)}>
                   Copy
                 </button>
               </div>
@@ -163,7 +174,8 @@ export default function Uploader() {
               </p>
             </div>
           </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

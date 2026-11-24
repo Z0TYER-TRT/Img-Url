@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { absoluteUrl, copyText, deleteFile, formatBytes, listFiles, type FileItem } from '@/lib/api';
+import { collapse } from '@/lib/motion';
 
 function day(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -42,13 +43,15 @@ export default function FileList() {
     setMessage((await copyText(absoluteUrl(url))) ? 'Link copied.' : '');
   }
 
-  async function remove(item: FileItem) {
+  async function remove(item: FileItem, button: HTMLElement) {
     if (!window.confirm(`Delete ${item.name}? The link stops working and cannot be restored.`)) return;
     setError('');
     try {
       await deleteFile(item.id);
-      setItems((prev) => prev.filter((row) => row.id !== item.id));
       setMessage(`Deleted ${item.name}.`);
+      collapse(button.closest('.tile'), () =>
+        setItems((prev) => prev.filter((row) => row.id !== item.id)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete file.');
     }
@@ -84,7 +87,7 @@ export default function FileList() {
                     <button
                       className="chip chip-danger"
                       type="button"
-                      onClick={() => void remove(item)}
+                      onClick={(event) => void remove(item, event.currentTarget)}
                     >
                       Delete
                     </button>

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import LoginForm from './login-form';
+import ThemeToggle from './theme-toggle';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001';
 
@@ -17,6 +18,8 @@ export default async function Home() {
     <div className="login">
       <header className="bar">
         <span className="wordmark">imgurl</span>
+        <span className="spacer" />
+        <ThemeToggle />
       </header>
 
       <main>
