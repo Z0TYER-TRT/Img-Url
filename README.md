@@ -151,10 +151,15 @@ curl -s https://myimages.duckdns.org/health      # {"ok":true,"mongo":"up"}
 curl -sI https://myimages.duckdns.org | head -1  # HTTP/2 200, valid certificate
 ```
 
-Then open `https://<PUBLIC_HOST>`, sign in, upload a small image, copy the link
-and open it in a private window. For a real bucket, work through
-[`docs/smoke.md`](docs/smoke.md) — it covers the things unit tests cannot: a real
-B2 write, a video seek, and deleting a link.
+Then open `https://<PUBLIC_HOST>`, sign in, and do these five checks — they cover
+what unit tests cannot:
+
+1. Upload a small image. Copy the link, open it in a private window. It renders.
+2. Upload a **>6 minute** video, open it, wait six minutes, then seek to 00:05:00.
+   It still plays — that proves the presigned URL outlives a long session.
+3. Delete the image in the panel. Its old link now returns 404, not 500.
+4. Create an API key and run the curl from the next section. You get a working URL.
+5. Revoke that key and run the same curl again. You get 401.
 
 ## Operating it
 

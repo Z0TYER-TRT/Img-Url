@@ -8,3 +8,4 @@ coverage/
 .superpowers/
 
 .playwright-mcp/
+apps/web/AGENTS.md
