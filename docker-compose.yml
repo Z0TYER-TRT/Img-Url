@@ -1,0 +1,58 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: ${MONGODB_URI}
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      B2_ACCOUNTS: ${B2_ACCOUNTS}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-50}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:3001
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  mongo_data:
+  caddy_data:
+  caddy_config:
