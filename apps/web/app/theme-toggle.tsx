@@ -7,12 +7,20 @@ import { reducedMotion } from '@/lib/motion';
 const STORAGE_KEY = 'imgurl-theme';
 type Theme = 'light' | 'dark';
 
+function resolvedTheme(): Theme {
+  const attribute = document.documentElement.dataset.theme;
+  if (attribute === 'dark' || attribute === 'light') return attribute;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function apply(theme: Theme) {
   document.documentElement.dataset.theme = theme;
+  // The server reads this on the next request, so a reload keeps the theme.
+  document.cookie = `theme=${theme}; path=/; max-age=31536000; samesite=lax`;
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {
-    // Private mode: the choice just will not persist.
+    // Private mode: the cookie still carries the choice.
   }
 }
 
@@ -22,7 +30,7 @@ export default function ThemeToggle() {
   const icon = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    setTheme(resolvedTheme());
     setMounted(true);
   }, []);
 

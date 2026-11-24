@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
+import { cookies } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,18 +7,15 @@ export const metadata: Metadata = {
   description: 'Self-hosted image and video host',
 };
 
-// Runs before paint, so the dark theme never flashes white first.
-const themeInit = `(function(){try{var k='imgurl-theme',t=localStorage.getItem(k);if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='light'}})();`;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The theme is decided on the server from the cookie the toggle sets, so the
+  // first paint is already correct. No inline script, nothing to flash.
+  const choice = (await cookies()).get('theme')?.value;
+  const theme = choice === 'dark' || choice === 'light' ? choice : undefined;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {themeInit}
-        </Script>
-        {children}
-      </body>
+    <html lang="en" data-theme={theme} suppressHydrationWarning>
+      <body>{children}</body>
     </html>
   );
 }

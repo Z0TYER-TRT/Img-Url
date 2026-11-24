@@ -64,6 +64,7 @@ echo json_decode(curl_exec($ch), true)['url'];`,
 export default function ApiDocs({ origin }: { origin: string }) {
   const [lang, setLang] = useState<Lang>('curl');
   const [copied, setCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const ink = useRef<HTMLSpanElement>(null);
   const code = useRef<HTMLPreElement>(null);
   const copyButton = useRef<HTMLButtonElement>(null);
@@ -104,6 +105,12 @@ export default function ApiDocs({ origin }: { origin: string }) {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
+  async function copyEndpoint() {
+    if (!(await copyText(endpoint))) return;
+    setUrlCopied(true);
+    window.setTimeout(() => setUrlCopied(false), 1600);
+  }
+
   return (
     <div className="docs" id="api">
       <div className="docs-head">
@@ -111,10 +118,15 @@ export default function ApiDocs({ origin }: { origin: string }) {
         <span className="muted">Send the file, get the link back. Same call for images and video.</span>
       </div>
 
-      <label className="field" style={{ marginTop: 12 }}>
+      <div className="field" style={{ marginTop: 12 }}>
         <span>API base URL</span>
-        <input readOnly value={endpoint} onFocus={(event) => event.currentTarget.select()} />
-      </label>
+        <div className="endpoint">
+          <code>{endpoint}</code>
+          <button className="btn" type="button" onClick={() => void copyEndpoint()}>
+            {urlCopied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      </div>
 
       <div className="tabs" role="tablist" aria-label="Example language">
         {LANGS.map((item) => (
