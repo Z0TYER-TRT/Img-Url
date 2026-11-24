@@ -1,0 +1,24 @@
+# Put an existing reverse proxy (nginx, Traefik, Caddy on the host) in front.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d
+#
+# The caddy service is pushed behind a profile so it never starts here, and the
+# two app services are published on loopback only — nothing listens publicly
+# except the proxy you already run.
+#
+# Point your proxy at:
+#   127.0.0.1:3200  -> the site (Next.js)
+#   127.0.0.1:3201  -> the API (/api/*, /f/*, /health)
+#
+# Change the two host ports if they are taken on your box.
+services:
+  caddy:
+    profiles: ["standalone"]
+
+  web:
+    ports:
+      - "127.0.0.1:3200:3000"
+
+  api:
+    ports:
+      - "127.0.0.1:3201:3001"

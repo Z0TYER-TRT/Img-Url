@@ -163,6 +163,71 @@ what unit tests cannot:
 
 ## Operating it
 
+### Behind an existing reverse proxy
+
+If the server already runs nginx (or Traefik, or Caddy on the host), Caddy must
+not start — two processes cannot own ports 80 and 443. Use the override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nginx.yml up -d
+```
+
+That disables the `caddy` service and publishes the app on loopback only:
+
+| Container | Host address |
+|---|---|
+| `web` (site) | `127.0.0.1:3200` |
+| `api` (`/api/*`, `/f/*`, `/health`) | `127.0.0.1:3201` |
+
+Edit the two ports in `docker-compose.nginx.yml` if they are taken.
+
+Then an nginx server block — note `client_max_body_size`, without it nginx
+rejects uploads over 1 MB with its own 413 before they reach the app:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name myimages.duckdns.org;
+
+    client_max_body_size 55m;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3201;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /f/       { proxy_pass http://127.0.0.1:3201; proxy_set_header Host $host; }
+    location /health   { proxy_pass http://127.0.0.1:3201; proxy_set_header Host $host; }
+
+    location / {
+        proxy_pass http://127.0.0.1:3200;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable it, then let certbot add TLS and the redirect:
+
+```bash
+ln -s /etc/nginx/sites-available/imgurl /etc/nginx/sites-enabled/imgurl
+nginx -t && systemctl reload nginx
+certbot --nginx -d myimages.duckdns.org --redirect -m you@example.com
+```
+
+`X-Forwarded-Proto` is not optional: the Developers page builds its example URLs
+from it, and the login cookie is only marked `Secure` when the app believes the
+request arrived over HTTPS.
+
 ```bash
 docker compose logs -f api        # or caddy, web, mongo
 docker compose restart api
