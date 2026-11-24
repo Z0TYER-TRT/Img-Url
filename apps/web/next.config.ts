@@ -4,6 +4,7 @@ const api = process.env.API_URL ?? 'http://localhost:3001';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  poweredByHeader: false,
   // The dev badge sits over the sidebar footer; it earns nothing.
   devIndicators: false,
   async rewrites() {

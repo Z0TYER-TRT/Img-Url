@@ -21,7 +21,9 @@ export class AdminGuard implements CanActivate {
     const token = request.cookies?.sid;
     if (typeof token !== 'string' || !token) throw new UnauthorizedException();
     try {
-      const payload = await this.jwt.verifyAsync<{ sub?: string; v?: string }>(token);
+      const payload = await this.jwt.verifyAsync<{ sub?: string; v?: string }>(token, {
+        algorithms: ['HS256'],
+      });
       if (payload?.v !== sessionVersion(this.config.adminPassword)) {
         throw new UnauthorizedException();
       }

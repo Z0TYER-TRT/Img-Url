@@ -273,6 +273,11 @@ keys and revocation.
 - Uploads are validated by magic bytes; only image and video types the server can
   name are accepted, so SVG (which can carry script) and TIFF are rejected.
 - Buckets stay private. Public links are 302s to short-lived presigned URLs.
+- Caddy sets HSTS, `X-Content-Type-Options`, `X-Frame-Options: DENY`, a referrer
+  policy and a permissions policy on every response, and strips `Server` and
+  `X-Powered-By`. `/api/*` and `/f/*` also send a deny-all CSP.
+- Session tokens are pinned to HS256 on verification, so a forged `alg: none`
+  token is rejected before the signature is even considered.
 - Files are served from Backblaze's domain, never from your origin, so a hostile
   file cannot run script in the panel's context.
 - MongoDB and the API are not published to the host; only Caddy listens publicly.

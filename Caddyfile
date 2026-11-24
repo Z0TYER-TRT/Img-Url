@@ -1,11 +1,24 @@
 {$PUBLIC_HOST} {
 	encode zstd gzip
 
+	header {
+		# Everything is HTTPS-only behind Caddy; one year is safe once you commit to it.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+		-X-Powered-By
+	}
+
 	handle /f/* {
+		header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
 		reverse_proxy api:3001
 	}
 
 	handle /api/* {
+		header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
 		reverse_proxy api:3001
 	}
 

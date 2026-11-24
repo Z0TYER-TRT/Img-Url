@@ -12,8 +12,10 @@ loadEnv({ path: '../../.env' });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const instance = app.getHttpAdapter().getInstance();
+  instance.disable('x-powered-by');
   app.use(cookieParser());
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  instance.set('trust proxy', 1);
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port, '0.0.0.0');
   Logger.log(`API listening on ${port}`, 'Bootstrap');
