@@ -198,16 +198,19 @@ export default function Sidebar({
 
         <div className="rail-foot">
           <span className="identity">{email}</span>
-          <ThemeToggle />
-          <button
-            className="icon-btn"
-            type="button"
-            onClick={() => void logout()}
-            aria-label="Log out"
-            title="Log out"
-          >
-            <LogOut size={16} strokeWidth={1.6} />
-          </button>
+          <div className="rail-actions">
+            <ThemeToggle />
+            <button
+              className="rail-link rail-logout"
+              type="button"
+              onClick={() => void logout()}
+              aria-label="Log out"
+              title={collapsed ? 'Log out' : undefined}
+            >
+              <LogOut size={16} strokeWidth={1.6} />
+              <span className="nav-label">Log out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
