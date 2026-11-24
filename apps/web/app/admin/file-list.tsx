@@ -49,6 +49,7 @@ export default function FileList() {
     try {
       await deleteFile(item.id);
       setMessage(`Deleted ${item.name}.`);
+      window.dispatchEvent(new Event('imgurl:changed'));
       collapse(button.closest('.tile'), () =>
         setItems((prev) => prev.filter((row) => row.id !== item.id)),
       );

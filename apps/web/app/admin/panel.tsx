@@ -1,43 +1,37 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import ThemeToggle from '../theme-toggle';
+import { useEffect, useState } from 'react';
+import Sidebar from './sidebar';
 import Uploader from './uploader';
 import FileList from './file-list';
 import Keys from './keys';
-import RailNav from './rail';
 
 export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: string }) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
-  async function logout() {
-    setPending(true);
+  useEffect(() => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      setCollapsed(localStorage.getItem('imgurl-rail') === '1');
     } catch {
-      // Cookie may still be valid; the guard on next visit will re-check.
+      // Storage blocked: the rail just starts expanded.
     }
-    router.replace('/');
-    router.refresh();
+  }, []);
+
+  function toggle() {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem('imgurl-rail', next ? '1' : '0');
+      } catch {
+        // Ignore: the choice lasts for this page view.
+      }
+      return next;
+    });
   }
 
   return (
-    <div className="shell">
-      <aside className="rail">
-        <span className="wordmark">imgurl</span>
-
-        <RailNav />
-
-        <div className="rail-foot">
-          <span className="identity">{email}</span>
-          <ThemeToggle />
-          <button className="btn-quiet" type="button" onClick={logout} disabled={pending}>
-            {pending ? 'Signing out' : 'Log out'}
-          </button>
-        </div>
-      </aside>
+    <div className="shell" data-collapsed={collapsed ? 'true' : 'false'}>
+      <Sidebar email={email} collapsed={collapsed} onToggle={toggle} />
 
       <main className="content">
         <div className="wrap">

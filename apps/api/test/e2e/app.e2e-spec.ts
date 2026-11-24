@@ -106,6 +106,18 @@ describe('ImgUrl API', () => {
     expect(second.body.next).toBeUndefined();
   });
 
+  it('counts the whole library on the first page only', async () => {
+    const first = await http().get('/api/files?limit=1').set('Cookie', cookie).expect(200);
+    expect(typeof first.body.total).toBe('number');
+    expect(first.body.total).toBeGreaterThan(1);
+
+    const second = await http()
+      .get(`/api/files?limit=1&cursor=${first.body.next}`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(second.body.total).toBeUndefined();
+  });
+
   it('treats a malformed cursor as the first page instead of failing', async () => {
     const res = await http().get('/api/files?cursor=not-base-64').set('Cookie', cookie).expect(200);
     expect(res.body.items.length).toBeGreaterThan(0);

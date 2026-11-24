@@ -35,9 +35,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function listFiles(cursor?: string) {
-  const query = `limit=24${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
-  return request<{ items: FileItem[]; next?: string }>(`/api/files?${query}`);
+export function listFiles(cursor?: string, limit = 24) {
+  const query = `limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+  return request<{ items: FileItem[]; next?: string; total?: number }>(`/api/files?${query}`);
 }
 
 export function deleteFile(id: string) {

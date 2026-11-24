@@ -131,6 +131,8 @@ export class FilesService {
     return {
       items: page.map((doc) => this.toDto(doc)),
       next: docs.length > take ? encodeCursor(page[page.length - 1]) : undefined,
+      // Only the first page needs the count; later pages would pay for an extra query.
+      total: cursor ? undefined : await this.model.countDocuments(),
     };
   }
 

@@ -28,6 +28,13 @@ export default function Uploader() {
     seen.current = results.length;
   }, [results.length]);
 
+  // The ⌘K palette can ask for the file picker without owning it.
+  useEffect(() => {
+    const pick = () => picker.current?.click();
+    window.addEventListener('imgurl:pick', pick);
+    return () => window.removeEventListener('imgurl:pick', pick);
+  }, []);
+
   // The API decides what is acceptable; pre-checking here would duplicate
   // MAX_UPLOAD_MB and reject valid files the OS reports without a mime type.
   async function run(files: File[]) {
@@ -38,6 +45,7 @@ export default function Uploader() {
         const result = await send(file);
         setResults((prev) => [result, ...prev].slice(0, 5));
         setMessage(`Uploaded ${result.name}`);
+        window.dispatchEvent(new Event('imgurl:changed'));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed.');
       } finally {
