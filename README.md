@@ -265,6 +265,7 @@ links and their ids are gone.
 | Upload returns `413` | file over `MAX_UPLOAD_MB` | raise the limit and `docker compose up -d`, or use a smaller file |
 | Login suddenly returns 401 with the right password | `ADMIN_PASSWORD` or `SESSION_SECRET` changed | sign in again; old cookies are invalidated on purpose |
 | An old link now 404s | its bucket was removed from `B2_ACCOUNTS` | put the entry back exactly as it was |
+| Build fails with `npm ci` / `Missing: <pkg> from lock file` | a dependency was added but the app's own lock was not updated | `sh scripts/sync-lock.sh`, commit the lock, rebuild |
 | `docker compose up` fails with `port is already allocated` | something else owns 80/443 | stop it: `ss -lptn 'sport = :80'` |
 
 ## API for bots
@@ -314,6 +315,10 @@ npm --workspace apps/web run dev
 
 The web app rewrites `/api/*` and `/f/*` to `http://localhost:3001` in dev, so the
 browser only ever talks to one origin and cookies work unchanged.
+
+After adding or removing a dependency, run `sh scripts/sync-lock.sh` and commit
+the lock it touches. Each Docker image installs from its own `apps/*/package-lock.json`,
+which `npm install` at the repo root does not update.
 
 ## Tests
 
