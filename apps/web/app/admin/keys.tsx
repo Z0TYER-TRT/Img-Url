@@ -75,7 +75,7 @@ export default function Keys({ apiOrigin }: { apiOrigin: string }) {
   }
 
   return (
-    <section className="section">
+    <section className="section" id="keys">
       <h2>API keys</h2>
 
       <div>

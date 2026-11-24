@@ -16,18 +16,19 @@ export default async function Home() {
 
   return (
     <div className="login">
-      <header className="bar">
-        <span className="wordmark">imgurl</span>
-        <span className="spacer" />
-        <ThemeToggle />
-      </header>
-
-      <main>
-        <div className="panel">
-          <h1>Sign in</h1>
-          <LoginForm />
+      <div className="login-frame">
+        <div className="login-top">
+          <span className="wordmark">imgurl</span>
+          <ThemeToggle />
         </div>
-      </main>
+
+        <h1>Sign in</h1>
+        <p className="login-sub">Your files, your bucket.</p>
+
+        <LoginForm />
+      </div>
+
+      <p className="login-caption">self-hosted · b2 + mongodb</p>
     </div>
   );
 }

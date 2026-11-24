@@ -84,7 +84,7 @@ export default function Uploader() {
   }
 
   return (
-    <section className="section">
+    <section className="section" id="upload">
       <h2>Upload</h2>
 
       <div>

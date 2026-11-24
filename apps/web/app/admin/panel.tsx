@@ -6,6 +6,7 @@ import ThemeToggle from '../theme-toggle';
 import Uploader from './uploader';
 import FileList from './file-list';
 import Keys from './keys';
+import RailNav from './rail';
 
 export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: string }) {
   const router = useRouter();
@@ -23,22 +24,28 @@ export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: 
   }
 
   return (
-    <>
-      <header className="bar">
+    <div className="shell">
+      <aside className="rail">
         <span className="wordmark">imgurl</span>
-        <span className="spacer" />
-        <span className="identity">{email}</span>
-        <ThemeToggle />
-        <button className="btn-quiet" type="button" onClick={logout} disabled={pending}>
-          {pending ? 'Signing out' : 'Log out'}
-        </button>
-      </header>
 
-      <main className="wrap">
-        <Uploader />
-        <FileList />
-        <Keys apiOrigin={apiOrigin} />
+        <RailNav />
+
+        <div className="rail-foot">
+          <span className="identity">{email}</span>
+          <ThemeToggle />
+          <button className="btn-quiet" type="button" onClick={logout} disabled={pending}>
+            {pending ? 'Signing out' : 'Log out'}
+          </button>
+        </div>
+      </aside>
+
+      <main className="content">
+        <div className="wrap">
+          <Uploader />
+          <FileList />
+          <Keys apiOrigin={apiOrigin} />
+        </div>
       </main>
-    </>
+    </div>
   );
 }

@@ -58,7 +58,7 @@ export default function FileList() {
   }
 
   return (
-    <section className="section">
+    <section className="section" id="library">
       <h2>Library</h2>
 
       <div>
