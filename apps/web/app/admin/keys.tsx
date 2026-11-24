@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { copyText, createKey, deleteKey, listKeys, type KeyItem } from '@/lib/api';
 import { popIn } from '@/lib/motion';
+import ApiDocs from './api-docs';
 
 function day(iso: string | null) {
   if (!iso) return 'Never';
@@ -13,7 +14,7 @@ function day(iso: string | null) {
   });
 }
 
-export default function Keys() {
+export default function Keys({ apiOrigin }: { apiOrigin: string }) {
   const [items, setItems] = useState<KeyItem[]>([]);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -160,6 +161,8 @@ export default function Keys() {
         <p className="status" aria-live="polite">
           {error ? <span className="error">{error}</span> : message}
         </p>
+
+        <ApiDocs origin={apiOrigin} />
       </div>
     </section>
   );

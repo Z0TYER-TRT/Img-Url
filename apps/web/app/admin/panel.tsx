@@ -7,7 +7,7 @@ import Uploader from './uploader';
 import FileList from './file-list';
 import Keys from './keys';
 
-export default function Panel({ email }: { email: string }) {
+export default function Panel({ email, apiOrigin }: { email: string; apiOrigin: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -37,7 +37,7 @@ export default function Panel({ email }: { email: string }) {
       <main className="wrap">
         <Uploader />
         <FileList />
-        <Keys />
+        <Keys apiOrigin={apiOrigin} />
       </main>
     </>
   );
