@@ -37,6 +37,23 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...validEnv, SESSION_SECRET: 'short' })).toThrow(/32/);
   });
 
+  it('accepts several accounts across regions', () => {
+    const three = JSON.stringify([
+      { keyId: 'a', appKey: 'a', bucket: 'img-a', region: 'us-west-004' },
+      { keyId: 'b', appKey: 'b', bucket: 'img-b', region: 'eu-central-003' },
+      { keyId: 'c', appKey: 'c', bucket: 'img-c', region: 'us-east-005' },
+    ]);
+    expect(loadConfig({ ...validEnv, B2_ACCOUNTS: three }).accounts).toHaveLength(3);
+  });
+
+  it('rejects two accounts pointing at the same bucket', () => {
+    const dupes = JSON.stringify([
+      { keyId: 'a', appKey: 'a', bucket: 'same', region: 'us-west-004' },
+      { keyId: 'b', appKey: 'b', bucket: 'same', region: 'eu-central-003' },
+    ]);
+    expect(() => loadConfig({ ...validEnv, B2_ACCOUNTS: dupes })).toThrow(/repeats/);
+  });
+
   it('names the missing variable', () => {
     const { ADMIN_EMAIL: _ignored, ...rest } = validEnv;
     expect(() => loadConfig(rest as NodeJS.ProcessEnv)).toThrow(/ADMIN_EMAIL/);

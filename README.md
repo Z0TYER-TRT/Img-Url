@@ -61,7 +61,14 @@ Two limits worth knowing before you start:
 1. Create a **private** bucket, note its region (e.g. `us-west-004`).
 2. Create an **application key** restricted to that bucket with capabilities
    `listFiles, readFiles, writeFiles, deleteFiles`.
-3. Repeat for up to 10 buckets if you want uploads spread across them.
+3. Repeat for up to 10 buckets if you want uploads spread across them. Each entry
+   in `B2_ACCOUNTS` needs its **own** bucket — the same bucket twice is rejected
+   at boot, because a file records only its bucket name. Buckets may sit in
+   different regions; each entry carries its own.
+
+Uploads go to the account holding the fewest files, and fall through to the next
+one if a bucket rejects the write. The `.env.example` shows the exact JSON for
+one account and for three.
 
 Each file records the **bucket name** it lives in, so later edits to this list
 are safe. Never delete a bucket you still have files in — those links become 404.

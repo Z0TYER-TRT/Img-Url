@@ -71,6 +71,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     }
   });
 
+  // A file records only its bucket name, so two entries sharing one bucket
+  // would make it ambiguous which key to use when reading or deleting.
+  const buckets = new Set<string>();
+  accounts.forEach((account, index) => {
+    if (buckets.has(account.bucket)) {
+      fail(`B2_ACCOUNTS[${index}].bucket repeats "${account.bucket}" — use a different bucket per account`);
+    }
+    buckets.add(account.bucket);
+  });
+
   const maxMb = Number(env.MAX_UPLOAD_MB ?? 50);
   if (!Number.isFinite(maxMb) || maxMb <= 0) fail('MAX_UPLOAD_MB must be a positive number');
 
