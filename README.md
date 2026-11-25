@@ -123,6 +123,7 @@ cp .env.example .env
 | `ADMIN_EMAIL` | your Gmail, used as the login name |
 | `ADMIN_PASSWORD` | 8–15 characters |
 | `SESSION_SECRET` | `openssl rand -hex 32` — changing it logs out every session |
+| `MONGODB_URI` | `mongodb://mongo:27017/imgurl`, or an Atlas URI (below) |
 | `B2_ACCOUNTS` | the JSON array from step 2 |
 | `DUCKDNS_TOKEN` | optional, only for `scripts/duckdns.sh` |
 | `MAX_UPLOAD_MB` | 50 unless you want another cap |
@@ -133,6 +134,42 @@ the request, so a wrong host produces working uploads with broken links.
 The app refuses to boot on a missing variable, a password outside 8–15, a
 `SESSION_SECRET` shorter than 32 characters, more than 10 accounts, a duplicate
 bucket, or the example secrets from `.env.example`.
+
+#### Database: the bundled container, or MongoDB Atlas
+
+The default is the `mongo` container that compose starts for you. Nothing to do.
+
+**Atlas instead** — useful when the box is small, or when you want the database
+somewhere other than the server that serves files:
+
+1. Create a free **M0** cluster at <https://cloud.mongodb.com>. 512 MB is far more
+   than enough: MongoDB holds only file metadata. The bytes live in B2.
+2. **Database Access** → add a user with a password. Use letters and numbers, or
+   URL-encode the special ones — `p@ss` must be written `p%40ss` inside the URI.
+3. **Network Access** → add the server's public IPv4. `0.0.0.0/0` works too and
+   is what people usually do for a personal box, but it is the internet.
+4. **Connect → Drivers** → copy the string, then **add the database name**:
+
+   ```env
+   MONGODB_URI=mongodb+srv://imgurl:p%40ss@cluster0.abc123.mongodb.net/imgurl?retryWrites=true&w=majority
+   ```
+
+   Without `/imgurl` MongoDB silently uses a database called `test`, and your
+   files will look like they vanished if you ever "fix" the URI later.
+
+5. Start as usual. The local `mongo` container is now unused — it costs about
+   150 MB of RAM, so stop it:
+
+   ```bash
+   docker compose stop mongo
+   ```
+
+If `mongodb+srv://` fails with a DNS error, the box cannot resolve Atlas SRV
+records. Use the non-SRV string instead (`mongodb://host1:27017,host2:27017/...`),
+which Atlas also shows under "Connect → Drivers → I don't have a SRV connection".
+
+Atlas manages its own backups on paid tiers; on M0 take one yourself (see
+Operating it).
 
 ### 5. Start
 
@@ -245,11 +282,20 @@ docker compose up -d --build
 Changed something in `.env`? `docker compose up -d` re-creates the containers with
 the new values; nothing else to restart.
 
-**Backup.** B2 already holds the bytes; back up the metadata:
+**Backup.** B2 already holds the bytes; back up the metadata.
+
+Bundled container:
 
 ```bash
 docker compose exec -T mongo mongodump --archive --gzip > imgurl-$(date +%F).gz
 gunzip -c imgurl-2026-11-25.gz | docker compose exec -T mongo mongorestore --archive --gzip
+```
+
+Atlas — dump it through the same image, so nothing needs installing on the host:
+
+```bash
+docker run --rm -e URI="$MONGODB_URI" mongo:7 \
+  sh -c 'mongodump --uri="$URI" --archive --gzip' > imgurl-$(date +%F).gz
 ```
 
 Losing MongoDB loses the index, not the files: the objects stay in B2 but the
