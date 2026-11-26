@@ -2,6 +2,8 @@
 
 A self-hosted image and video host. Upload a file, get a permanent public link.
 
+![ImgUrl login screen](assets/login.png)
+
 ```
 https://yourname.duckdns.org/f/AbC123xYz9
 ```
@@ -36,6 +38,8 @@ One admin, no signups, no third-party CDN, no per-file subdomains.
 - [Local development](#local-development)
 - [Tests](#tests)
 - [License](#license)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
 
 ## How it works
 
